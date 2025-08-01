@@ -16,7 +16,11 @@ RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.10 1 &
 RUN pip install --upgrade pip
 RUN pip install torch --index-url https://download.pytorch.org/whl/cu121
 
-RUN pip install faster-whisper ebooklib beautifulsoup4
+RUN pip install faster-whisper
+RUN pip install ebooklib
+RUN pip install beautifulsoup4
+RUN pip install rapidfuzz
+RUN pip install sentence-transformers
 
 WORKDIR /app
 COPY . .
