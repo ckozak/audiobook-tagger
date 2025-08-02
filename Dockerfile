@@ -21,6 +21,8 @@ RUN pip install ebooklib
 RUN pip install beautifulsoup4
 RUN pip install rapidfuzz
 RUN pip install sentence-transformers
+RUN pip install mutagen
+RUN pip install tbm-utils
 
 WORKDIR /app
 COPY . .

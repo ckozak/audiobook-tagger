@@ -1,0 +1,6 @@
+faster-whisper
+ebooklib
+beautifulsoup4
+torch
+sentence-transformers
+mutagen
