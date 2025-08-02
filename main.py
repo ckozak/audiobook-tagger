@@ -1,6 +1,7 @@
 import sys
 import json
 import re
+import argparse
 from ebooklib import epub
 from ebooklib import ITEM_DOCUMENT
 from bs4 import BeautifulSoup
@@ -10,6 +11,7 @@ from sentence_transformers import SentenceTransformer, util
 # Configuration
 MIN_SNIPPET_CHARS = 200
 MAX_SNIPPET_PARAS = 3
+CONFIDENCE_THRESHOLD = 65.0 # Minimum similarity score to consider a match
 
 def normalize(txt):
     txt = txt.lower()
@@ -64,16 +66,34 @@ def format_time(seconds):
     return f"{h:02d}:{m:02d}:{s:02d}"
 
 def main():
-    if len(sys.argv) != 3:
-        print("Usage: python main.py <ebook.epub> <transcript.json>")
-        sys.exit(1)
-    epub_path, transcript_path = sys.argv[1], sys.argv[2]
+    parser = argparse.ArgumentParser(description="Align audiobook chapters with an ebook text.")
+    parser.add_argument("ebook", help="Path to the EPUB file.")
+    parser.add_argument("transcript", help="Path to the transcript JSON file.")
+    parser.add_argument("--start-chapter", type=int, default=1, help="The chapter number to start matching from.")
+    args = parser.parse_args()
 
     # Extract chapters
-    chapters = extract_chapter_snippets(epub_path)
+    chapters = extract_chapter_snippets(args.ebook)
+
+    # Filter chapters based on start_chapter argument
+    if args.start_chapter > 1:
+        start_index = -1
+        # Find the index of the chapter to start from.
+        # This is a bit naive and assumes chapter titles contain the number.
+        for i, ch in enumerate(chapters):
+            if f"— {args.start_chapter} —" in ch['chapter'] or ch['chapter'].strip() == str(args.start_chapter):
+                start_index = i
+                break
+        
+        if start_index != -1:
+            print(f"Starting scan from Chapter {args.start_chapter}...")
+            chapters = chapters[start_index:]
+        else:
+            print(f"Warning: Could not find start chapter {args.start_chapter}. Starting from the beginning.")
+
 
     # Load transcript
-    with open(transcript_path, 'r', encoding='utf-8') as f:
+    with open(args.transcript, 'r', encoding='utf-8') as f:
         transcript = json.load(f)
 
     # Normalize transcript text
@@ -146,10 +166,10 @@ def main():
                     'best_window_idx': best_global_idx
                 }
 
-        if not best_match_info:
+        if not best_match_info or best_match_info['score'] < CONFIDENCE_THRESHOLD:
             print(f"Chapter: {ch['chapter']}")
-            print("  --> No suitable match found.")
-            continue
+            print(f"  --> No suitable match found above threshold {CONFIDENCE_THRESHOLD}. Stopping.")
+            break # Stop processing further chapters
             
         # Update the last match index to continue the search from here
         last_match_window_idx = best_match_info['best_window_idx']
